@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withy Extension Test Dashboard</title>
+    <!-- SockJS & Stomp -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            background: #334155;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .indicator.on { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .indicator.off { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0 0 5px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title i { color: var(--primary); }
+
+        /* Form Elements */
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.8rem; color: var(--text-muted); }
+        input, select {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        /* Buttons */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-row { display: flex; gap: 8px; margin-top: 5px; }
+
+        button {
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: white;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.4); }
+        .btn-warning { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .btn-warning:hover { background: rgba(245, 158, 11, 0.4); }
+        .btn-subtle { background: #334155; color: #cbd5e1; }
+        .btn-subtle:hover { background: #475569; }
+
+        .btn-handshake {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-handshake:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* Right Panel Layout */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 5px; /* Scrollbar space */
+        }
+
+        /* Logs */
+        .log-panel {
+            grid-column: 2;
+            grid-row: 1 / span 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .log-container {
+            flex: 1;
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .log-entry { margin-bottom: 6px; padding: 4px; border-radius: 4px; }
+        .log-entry:hover { background: #1e293b; }
+        .log-time { color: var(--text-muted); margin-right: 8px; font-size: 0.75rem; }
+        .tx { color: #818cf8; } /* Transmit */
+        .rx { color: #34d399; } /* Receive */
+        .err { color: #f87171; }
+        .sys { color: #94a3b8; font-style: italic; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1><i class="fa-solid fa-satellite-dish"></i> Withy Test Dashboard</h1>
+        <div class="status-badge">
+            <div id="connection-dot" class="indicator"></div>
+            <span id="connection-text">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        
+        <!-- Left Column: Controls -->
+        <div style="display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
+            
+            <!-- 1. Connection -->
+            <div class="card">
+                <h3 class="card-title"><i class="fa-solid fa-link"></i> Connection</h3>
+                <div class="form-group">
+                    <label>Server URL</label>
+                    <input type="text" id="serverUrl" value="https://3.36.95.236.nip.io/ws-stomp">
+                </div>
+                <div class="form-group">
+                    <label>JWT Token</label>
+                    <input type="password" id="token" placeholder="Paste Bearer Token...">
+                </div>
+                <div class="form-group">
+                    <label>Party ID</label>
+                    <input type="number" id="partyId" value="1">
+                </div>
+                <div class="btn-grid">
+                    <button onclick="connect()" class="btn-primary">Connect</button>
+                    <button onclick="disconnect()" class="btn-danger">Disconnect</button>
+                </div>
+                <!-- Handshake Button Moved Here -->
+                <button onclick="sendHandshake()" class="btn-handshake" style="margin-top:10px;"><i class="fa-solid fa-handshake"></i> Send Handshake</button>
+            </div>
+
+            <!-- 2. Extension State (Host Only) -->
+            <div class="card">
+                <h3 class="card-title"><i class="fa-solid fa-film"></i> Media Contol (Host)</h3>
+                <div class="form-group">
+                    <label>Command</label>
+                    <div class="btn-row">
+                        <button onclick="sendStateMsg('PLAY')" class="btn-success" style="flex:1"><i class="fa-solid fa-play"></i></button>
+                        <button onclick="sendStateMsg('PAUSE')" class="btn-warning" style="flex:1"><i class="fa-solid fa-pause"></i></button>
+                        <button onclick="sendStateMsg('SEEK')" class="btn-subtle" style="flex:1"><i class="fa-solid fa-forward"></i></button>
+                        <button onclick="sendStateMsg('CHANGE_CONTENT')" class="btn-subtle" style="flex:1"><i class="fa-solid fa-rotate"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Current Position (sec)</label>
+                    <input type="number" id="syncPosition" value="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Content URL</label>
+                    <input type="text" id="syncUrl" value="https://netflix.com/watch/123">
+                </div>
+
+            </div>
+
+            <!-- 3. Admin Controls -->
+            <div class="card" style="border-color: rgba(244, 63, 94, 0.3);">
+                <h3 class="card-title" style="color: #fda4af;"><i class="fa-solid fa-user-shield"></i> Admin Actions</h3>
+                <div class="form-group">
+                    <label>Target User ID</label>
+                    <input type="number" id="targetUserId" placeholder="User ID">
+                </div>
+                
+                <label style="font-size:0.75rem; margin-top:5px; color:var(--text-muted);">Manage User</label>
+                <div class="btn-grid">
+                    <button onclick="banUser()" class="btn-danger"><i class="fa-solid fa-ban"></i> Ban</button>
+                    <button onclick="muteUser()" class="btn-warning"><i class="fa-solid fa-microphone-slash"></i> Mute</button>
+                </div>
+                <button onclick="restoreUser()" class="btn-success" style="width:100%; margin-top:5px;"><i class="fa-solid fa-rotate-left"></i> Restore (Unban/Unmute)</button>
+
+                <label style="font-size:0.75rem; margin-top:5px; color:var(--text-muted);">Change Role</label>
+                <div class="btn-row">
+                    <button onclick="updateRole('MANAGER')" class="btn-subtle" style="flex:1">Manager</button>
+                    <button onclick="updateRole('GUEST')" class="btn-subtle" style="flex:1">Guest</button>
+                </div>
+                <button onclick="updateRole('HOST')" class="btn-warning" style="margin-top:5px; border-style:dashed;">Delegate Host</button>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Logs -->
+        <div class="card log-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 class="card-title"><i class="fa-solid fa-terminal"></i> Real-time Logs</h3>
+                <button onclick="clearLogs()" style="width:auto; padding:4px 10px; font-size:0.75rem;" class="btn-subtle">Clear</button>
+            </div>
+            <div id="logs" class="log-container">
+                <div class="log-entry sys">System ready. Waiting for connection...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Logic Script -->
+    <script>
+        let stompClient = null;
+        let playbackInterval = null;
+
+        // Logging Utility
+        function log(msg, type = 'sys') {
+            const box = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            const line = document.createElement('div');
+            
+            let icon = '';
+            if (type === 'tx') icon = '📤 ';
+            if (type === 'rx') icon = '📥 ';
+            if (type === 'err') icon = '❌ ';
+            
+            line.className = `log-entry ${type}`;
+            line.innerHTML = `<span class="log-time">[${time}]</span> ${icon}${msg}`;
+            
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Connection Handling
+        function updateStatus(isConnected) {
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-text');
+            
+            if (isConnected) {
+                dot.className = 'indicator on';
+                text.innerText = 'Connected';
+                text.style.color = 'var(--success)';
+            } else {
+                dot.className = 'indicator off';
+                text.innerText = 'Disconnected';
+                text.style.color = 'var(--text-muted)';
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('serverUrl').value;
+            const token = document.getElementById('token').value;
+            const partyId = document.getElementById('partyId').value;
+
+            if (!token) { log('Token is required!', 'err'); return; }
+
+            const socket = new SockJS(url);
+            stompClient = Stomp.over(socket);
+            stompClient.debug = () => {}; // Disable default debug logs
+
+            log(`Connecting to Party #${partyId}...`, 'sys');
+
+            stompClient.connect({ 'Authorization': 'Bearer ' + token }, 
+                function (frame) {
+                    updateStatus(true);
+                    log('WebSocket Connected established.', 'sys');
+
+                    // Subscribe to channels
+                    stompClient.subscribe(`/user/queue/party/${partyId}/extension/handshake`, (msg) => {
+                        log(`Handshake: ${msg.body}`, 'rx');
+                    });
+
+                    stompClient.subscribe(`/sub/party/${partyId}/extension`, (msg) => {
+                        log(`Broadcast: ${msg.body}`, 'rx');
+                        try {
+                            const body = JSON.parse(msg.body);
+                            if (body.type === 'PARTICIPANT_STATUS_UPDATE') {
+                                log(`🔄 User ${body.userId} status changed to ${body.status}`, 'sys');
+                            } else if (body.type === 'USER_BANNED') {
+                                log(`🚫 User ${body.userId} BANNED`, 'sys');
+                            } else if (body.type === 'USER_MUTED') {
+                                log(`🔇 User ${body.userId} MUTED`, 'sys');
+                            } else if (body.type === 'USER_LEFT') {
+                                log(`👋 User ${body.userId} Left`, 'sys');
+                            } else if (body.type === 'USER_JOINED') {
+                                log(`👋 User ${body.userId} Joined`, 'sys');
+                            }
+                        } catch (e) {
+                            // ignore parse error for simple text
+                        }
+                    });
+
+                    // Auto Handshake (For Session Registration)
+                    sendHandshake();
+
+                }, 
+                function (error) {
+                    updateStatus(false);
+                    log(`Connection Error: ${error}`, 'err');
+                }
+            );
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                log('Disconnected by user.', 'sys');
+            }
+            updateStatus(false);
+        }
+
+        // Extension Actions
+        function sendHandshake() {
+            if (!checkConnection()) return;
+            const partyId = document.getElementById('partyId').value;
+            stompClient.send(`/pub/party/${partyId}/extension/handshake`, {}, {});
+            log('Sent Handshake Request', 'tx');
+        }
+
+        function sendStateMsg(type) {
+            if (!checkConnection()) return;
+            
+            const partyId = document.getElementById('partyId').value;
+            const position = document.getElementById('syncPosition').value;
+            const url = document.getElementById('syncUrl').value;
+            const isPlaying = (type === 'PLAY');
+
+            const payload = {
+                commandType: type,
+                currentPosition: parseFloat(position),
+                isPlaying: isPlaying,
+                partyUrl: url,
+                timestamp: Date.now()
+            };
+
+            stompClient.send(`/pub/party/${partyId}/extension/state`, {}, JSON.stringify(payload));
+            log(`Sent State: ${type} at ${position}s`, 'tx');
+
+            // Simulate Playback for Host
+            if (type === 'PLAY') startSimulation();
+            if (type === 'PAUSE') stopSimulation();
+        }
+
+        function startSimulation() {
+            if (playbackInterval) clearInterval(playbackInterval);
+            const input = document.getElementById('syncPosition');
+            let startVal = parseFloat(input.value);
+            const startTime = Date.now();
+
+            log('Simulation started (Auto-increment)', 'sys');
+            playbackInterval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                input.value = (startVal + elapsed).toFixed(1);
+            }, 100);
+        }
+
+        function stopSimulation() {
+            if (playbackInterval) clearInterval(playbackInterval);
+            log('Simulation paused', 'sys');
+        }
+
+        // Admin Actions
+        async function callApi(method, urlSuffix, body = null) {
+            const token = document.getElementById('token').value;
+            const partyId = document.getElementById('partyId').value;
+            const targetId = document.getElementById('targetUserId').value;
+
+            if (!token || !targetId) { log('Token & Target User ID required', 'err'); return; }
+
+            const url = `/api/v1/parties/${partyId}/participants/${targetId}${urlSuffix}`;
+            log(`${method} ${url}`, 'sys');
+
+            try {
+                const opts = {
+                    method: method,
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+                };
+                if (body) opts.body = JSON.stringify(body);
+
+                const res = await fetch(url, opts);
+                if (res.ok) {
+                    log('API Request Successful', 'rx');
+                } else {
+                    const txt = await res.text();
+                    log(`API Error: ${txt}`, 'err');
+                }
+            } catch (e) {
+                log(`Network Error: ${e}`, 'err');
+            }
+        }
+
+        async function banUser() { await callApi('DELETE', '?status=BANNED'); }
+        async function muteUser() { await callApi('DELETE', '?status=MUTED'); }
+        async function restoreUser() { await callApi('PATCH', '/status?status=JOINED'); }
+        async function updateRole(role) { await callApi('PATCH', '', { newRole: role }); }
+
+        function checkConnection() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected to WebSocket!', 'err');
+                return false;
+            }
+            return true;
+        }
+
+    </script>
+</body>
+</html>

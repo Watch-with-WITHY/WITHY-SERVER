@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  # 1. Redis (Cache & Buffer)
+  redis:
+    image: redis:alpine
+    container_name: withy-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes # AOF 활성화 (데이터 지속성)
+
+  # 2. RedisInsight (Redis GUI)
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: withy-redis-gui
+    ports:
+      - "5540:5540" # 접속: http://localhost:5540
+    depends_on:
+      - redis
+
+  # 3. Zookeeper (Kafka Coordinator)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: withy-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  # 4. Kafka (Message Broker)
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: withy-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 로컬 개발용 외부 접속 설정
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # 5. Kafka UI (Kafka GUI)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: withy-kafka-gui
+    ports:
+      - "8090:8080" # 접속: http://localhost:8090
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181

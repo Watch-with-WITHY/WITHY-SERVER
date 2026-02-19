@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Withy Premium Chat Test</title>
+    <!-- SockJS & Stomp -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --accent-color: #6366f1;
+        --accent-hover: #4f46e5;
+        --text-color: #f8fafc;
+        --text-secondary: #94a3b8;
+        --border-color: rgba(255, 255, 255, 0.1);
+        --msg-user-bg: #4f46e5;
+        --msg-other-bg: #334155;
+        --success: #10b981;
+        --error: #ef4444;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        background-image:
+          radial-gradient(
+            at 0% 0%,
+            rgba(99, 102, 241, 0.15) 0px,
+            transparent 50%
+          ),
+          radial-gradient(
+            at 100% 100%,
+            rgba(16, 185, 129, 0.1) 0px,
+            transparent 50%
+          );
+        color: var(--text-color);
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .app-container {
+        width: 100%;
+        max-width: 1000px;
+        height: 90vh;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      /* Settings Panel (Left) */
+      .settings-panel {
+        flex: 1;
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+
+      h2,
+      h3 {
+        margin: 0;
+        font-weight: 600;
+        background: linear-gradient(to right, #6366f1, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      input,
+      select {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 12px;
+        color: var(--text-color);
+        font-family: inherit;
+        transition: all 0.2s;
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+      }
+
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: var(--accent-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.3);
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.4);
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--text-secondary);
+        box-shadow: 0 0 8px currentColor;
+        transition: all 0.3s;
+      }
+
+      .connected .dot {
+        background-color: var(--success);
+        color: var(--success);
+      }
+
+      .disconnected .dot {
+        background-color: var(--error);
+        color: var(--error);
+      }
+
+      /* Chat Area (Right) */
+      .chat-area {
+        flex: 2;
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      }
+
+      .chat-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .messages-container {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        scroll-behavior: smooth;
+      }
+
+      .messages-container::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .messages-container::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+
+      .message {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        position: relative;
+        animation: fadeIn 0.3s ease-out;
+        word-break: break-word;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.mine {
+        align-self: flex-end;
+        background: var(--msg-user-bg);
+        color: white;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+      }
+
+      .message.other {
+        align-self: flex-start;
+        background: var(--msg-other-bg);
+        color: var(--text-color);
+        border-bottom-left-radius: 4px;
+      }
+
+      .message.system {
+        align-self: center;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        border-radius: 8px;
+        padding: 6px 12px;
+      }
+
+      .message-meta {
+        font-size: 0.75rem;
+        margin-top: 4px;
+        opacity: 0.7;
+        text-align: right;
+      }
+
+      .message.other .message-meta {
+        text-align: left;
+      }
+
+      .input-area {
+        padding: 20px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        gap: 10px;
+      }
+
+      .input-area input {
+        flex-grow: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app-container">
+      <!-- Configuration Panel -->
+      <div class="settings-panel">
+        <h2>WITHY</h2>
+        <div
+          style="
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+          "
+        >
+          Real-time Chat Debugger
+        </div>
+
+        <div id="connection-status" class="status-indicator disconnected">
+          <div class="dot"></div>
+          <span id="status-text">Disconnected</span>
+        </div>
+
+        <div class="control-group">
+          <label>Server URL</label>
+          <input
+            type="text"
+            id="serverUrl"
+            value="https://3.36.95.236.nip.io/ws-stomp"
+            placeholder="https://3.36.95.236.nip.io/ws-stomp"
+          />
+        </div>
+
+        <div class="control-group">
+          <label>Access Token (Bearer 제외)</label>
+          <input type="text" id="token" placeholder="JWT Token..." />
+        </div>
+
+        <div class="control-group">
+          <label>파티 ID (Party Room)</label>
+          <input type="number" id="partyId" value="1" placeholder="예: 1" />
+        </div>
+
+        <div class="control-group">
+          <label>사용자 ID (User)</label>
+          <input type="number" id="userId" value="1" placeholder="예: 100" />
+        </div>
+
+        <div
+          class="control-group"
+          style="flex-direction: row; gap: 10px; margin-top: 10px"
+        >
+          <button
+            id="btn-connect"
+            class="btn-primary"
+            style="flex: 1"
+            onclick="connect()"
+          >
+            연결 (Connect)
+          </button>
+          <button
+            id="btn-disconnect"
+            class="btn-danger"
+            style="flex: 1"
+            onclick="disconnect()"
+            disabled
+          >
+            해제
+          </button>
+        </div>
+
+        <div
+          class="control-group"
+          style="flex-direction: row; gap: 10px; margin-top: 10px"
+        >
+          <button
+            id="btn-handshake"
+            onclick="sendHandshake()"
+            style="
+              flex: 1;
+              background: rgba(56, 189, 248, 0.2);
+              color: #7dd3fc;
+              border: 1px solid rgba(56, 189, 248, 0.3);
+            "
+          >
+            🤝 Handshake
+          </button>
+        </div>
+
+        <div class="control-group">
+          <label>User Management (Admin)</label>
+          <input type="number" id="targetUserId" placeholder="Target User ID" />
+          <div style="display: flex; gap: 5px; margin-top: 5px;">
+            <button class="btn-danger" onclick="changeUserStatus('BANNED')">Ban 🚫</button>
+            <button class="btn-primary" onclick="changeUserStatus('MUTED')">Mute 🔇</button>
+            <button style="flex:1; background:#10b981; color:white; border:none; border-radius:4px;" onclick="updateUserStatus('JOINED')">Restore (Unban/Unmute) ✅</button>
+          </div>
+        </div>
+
+        <div style="margin-top: auto">
+          <div class="control-group">
+            <label>메시지 타입</label>
+            <select id="msgType">
+              <option value="TEXT">TEXT (일반)</option>
+              <option value="EMOJI">EMOJI (이모지)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Interface -->
+      <div class="chat-area">
+        <div class="chat-header">
+          <h3>Live Chat</h3>
+          <button
+            class="btn-danger"
+            style="padding: 6px 12px; font-size: 0.8rem"
+            onclick="clearChat()"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div id="messages" class="messages-container">
+          <div class="message system">
+            채팅방에 입장하려면 '연결' 버튼을 누르세요.
+          </div>
+        </div>
+
+        <div class="input-area">
+          <input
+            type="text"
+            id="content"
+            placeholder="메시지를 입력하세요... (Enter 전송)"
+            onkeypress="handleEnter(event)"
+          />
+          <button class="btn-primary" onclick="sendMessage()">전송</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var stompClient = null;
+      var currentSubscription = null;
+
+      // UI Elements
+      const statusDiv = document.getElementById("connection-status");
+      const statusText = document.getElementById("status-text");
+      const btnConnect = document.getElementById("btn-connect");
+      const btnDisconnect = document.getElementById("btn-disconnect");
+      const messages = document.getElementById("messages");
+
+      function handleEnter(e) {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      }
+
+      function setConnected(connected) {
+        if (connected) {
+          statusDiv.className = "status-indicator connected";
+          statusText.innerText = "Connected (Secure)";
+          btnConnect.disabled = true;
+          btnDisconnect.disabled = false;
+        } else {
+          statusDiv.className = "status-indicator disconnected";
+          statusText.innerText = "Disconnected";
+          btnConnect.disabled = false;
+          btnDisconnect.disabled = true;
+        }
+      }
+
+      function connect() {
+        var serverUrl = document.getElementById("serverUrl").value;
+        var token = document.getElementById("token").value;
+
+        var socket = new SockJS(serverUrl);
+        stompClient = Stomp.over(socket);
+
+        var partyId = document.getElementById("partyId").value;
+        var userId = document.getElementById("userId").value;
+
+        if (!partyId || !userId) {
+          alert("파티 ID와 사용자 ID를 입력해주세요.");
+          return;
+        }
+
+        var headers = {};
+        if (token) {
+          headers["Authorization"] = "Bearer " + token;
+        }
+
+        stompClient.connect(
+          headers,
+          function (frame) {
+            setConnected(true);
+            addSystemMessage("서버에 연결되었습니다.");
+            console.log("Connected: " + frame);
+
+            // Subscribe
+            currentSubscription = stompClient.subscribe(
+              "/sub/chat/room/" + partyId,
+              function (messageOutput) {
+                showMessage(JSON.parse(messageOutput.body));
+              },
+            );
+
+            // Handshake Response Listener (1:1)
+            stompClient.subscribe(
+              "/user/queue/party/" + partyId + "/extension/handshake",
+              function (message) {
+                addSystemMessage("📥 [Private] Handshake: " + message.body);
+              },
+            );
+
+            // Broadcast Listener (Debug & State)
+            stompClient.subscribe(
+              "/sub/party/" + partyId + "/extension",
+              function (message) {
+                var body = JSON.parse(message.body);
+                addSystemMessage("📢 [Broadcast] " + message.body);
+                
+                if (body.type === "PARTICIPANT_STATUS_UPDATE") {
+                    addSystemMessage(`🔄 User ${body.userId} status changed to ${body.status}`);
+                } else if (body.type === "USER_BANNED") {
+                    addSystemMessage(`🚫 User ${body.userId} BANNED`);
+                } else if (body.type === "USER_MUTED") {
+                    addSystemMessage(`🔇 User ${body.userId} MUTED`);
+                }
+              },
+            );
+
+            // Error Handling (User Queue)
+            stompClient.subscribe("/user/queue/errors", function (message) {
+              addSystemMessage("ERROR: " + message.body);
+            });
+
+            // Auto Handshake (Session Registration 위해 필수)
+            sendHandshake();
+          },
+          function (error) {
+            console.error(error);
+            setConnected(false);
+            addSystemMessage("연결 실패: " + error);
+          },
+        );
+      }
+
+      function disconnect() {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+        setConnected(false);
+        addSystemMessage("연결이 종료되었습니다.");
+      }
+
+      function sendHandshake() {
+        if (!stompClient || !stompClient.connected) {
+          alert("먼저 연결(Connect) 해주세요.");
+          return;
+        }
+        var partyId = document.getElementById("partyId").value;
+        stompClient.send(
+          "/pub/party/" + partyId + "/extension/handshake",
+          {},
+          {},
+        );
+        addSystemMessage("📤 Handshake 요청을 보냈습니다.");
+      }
+
+      function sendMessage() {
+        var content = document.getElementById("content").value;
+        var partyId = document.getElementById("partyId").value;
+        var userId = document.getElementById("userId").value;
+        var type = document.getElementById("msgType").value;
+
+        if (!stompClient || !stompClient.connected) {
+          alert("먼저 연결(Connect) 해주세요.");
+          return;
+        }
+
+        if (content.trim() === "") return;
+
+        stompClient.send(
+          "/pub/chat/message",
+          {},
+          JSON.stringify({
+            partyId: partyId,
+            userId: userId,
+            content: content,
+            type: type,
+          }),
+        );
+
+        document.getElementById("content").value = "";
+      }
+
+      function showMessage(msg) {
+        var currentUserId = document.getElementById("userId").value;
+        var isMine = String(msg.userId) === String(currentUserId);
+
+        // 메시지 ID로 기존 메시지 찾기
+        var existingMsg = document.getElementById("msg-" + msg.id);
+
+        // 내용 설정
+        var content = msg.content;
+        var msgClass = isMine ? "message mine" : "message other";
+        var style = "";
+
+        if (msg.isDeleted) {
+          content =
+            '<span style="color:gray; font-style:italic;">(삭제된 메시지입니다)</span>';
+          style = "color: gray;";
+        }
+
+        var deleteBtn = "";
+        // 삭제되지 않았고, 내가 쓴 글이거나 (방장/매니저 로직은 프론트에서 알 수 없으니 일단 다 보여주거나 본인만)
+        // 테스트 편의를 위해 무조건 표시하되, 본인 아니면 서버에서 거부됨.
+        if (!msg.isDeleted) {
+          deleteBtn = ` <button onclick="deleteMessage(${msg.id})" style="border:none; background:none; color:#ef4444; cursor:pointer; font-size:0.8em; margin-left:5px;">[삭제]</button>`;
+        }
+
+        var innerHTML = `
+            ${isMine ? "" : `<div style="font-size:0.7em; margin-bottom:4px; opacity:0.8; font-weight:bold;">User ${msg.userId}</div>`}
+            <div style="${style}">${content} ${deleteBtn}</div>
+            <div class="message-meta">${msg.createdAt ? msg.createdAt : formatTime(new Date())}</div>
+        `;
+
+        if (existingMsg) {
+          existingMsg.className = msgClass;
+          existingMsg.innerHTML = innerHTML;
+        } else {
+          var msgDiv = document.createElement("div");
+          msgDiv.id = "msg-" + msg.id;
+          msgDiv.className = msgClass;
+          msgDiv.innerHTML = innerHTML;
+          messages.appendChild(msgDiv);
+          scrollToBottom();
+        }
+      }
+
+      function deleteMessage(chatId) {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        var token = prompt(
+          "삭제를 위해 JWT 토큰(Bearer 제외)을 입력해주세요.\n(로그인 API를 통해 발급받은 토큰)",
+        );
+        if (!token) return;
+
+        fetch(`/api/chat/messages/${chatId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === 200) {
+              alert("삭제되었습니다.");
+            } else {
+              alert("삭제 실패: " + data.message);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      function changeUserStatus(status) {
+        var partyId = document.getElementById("partyId").value;
+        var userId = document.getElementById("targetUserId").value; // Target User
+        
+        if (!userId) {
+            alert("Target User ID를 입력해주세요.");
+            return;
+        }
+
+        if (!confirm(userId + "번 유저를 " + status + " 처리하시겠습니까?")) return;
+
+        var token = prompt("관리자(방장/매니저) JWT 토큰 입력:");
+        if (!token) return;
+
+        // 기존 Ban/Mute API (DELETE)
+        fetch(`/api/v1/parties/${partyId}/participants/${userId}?status=${status}`, {
+            method: "DELETE",
+            headers: {
+                Authorization: "Bearer " + token
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 200) alert("처리되었습니다.");
+            else alert("실패: " + data.message);
+        })
+        .catch(err => console.error(err));
+      }
+
+      function updateUserStatus(status) {
+        var partyId = document.getElementById("partyId").value;
+        var userId = document.getElementById("targetUserId").value; // Target User
+        
+        if (!userId) {
+            alert("Target User ID를 입력해주세요.");
+            return;
+        }
+
+        if (!confirm(userId + "번 유저 상태를 " + status + "로 변경하시겠습니까?")) return;
+
+        var token = prompt("관리자(방장/매니저) JWT 토큰 입력:");
+        if (!token) return;
+
+        // 상태 변경 API (PATCH)
+        fetch(`/api/v1/parties/${partyId}/participants/${userId}/status?status=${status}`, {
+            method: "PATCH",
+            headers: {
+                Authorization: "Bearer " + token
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 200) alert("상태가 변경되었습니다.");
+            else alert("실패: " + data.message);
+        })
+        .catch(err => console.error(err));
+      }
+
+      function addSystemMessage(text) {
+        var div = document.createElement("div");
+        div.className = "message system";
+        div.innerText = text;
+        messages.appendChild(div);
+        scrollToBottom();
+      }
+
+      function clearChat() {
+        messages.innerHTML =
+          '<div class="message system">채팅 내역이 초기화되었습니다.</div>';
+      }
+
+      function scrollToBottom() {
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function formatTime(date) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    </script>
+  </body>
+</html>

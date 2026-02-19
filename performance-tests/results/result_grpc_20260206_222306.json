@@ -1,0 +1,69 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "status is OK": {
+                    "id": "d83a99fb6db0de09e9f0d32dd8d2e9d5",
+                    "passes": 104,
+                    "fails": 0,
+                    "name": "status is OK",
+                    "path": "::status is OK"
+                },
+                "latency < 200ms": {
+                    "name": "latency < 200ms",
+                    "path": "::latency < 200ms",
+                    "id": "d5d972e45ae02eeb06b87a71939ff40c",
+                    "passes": 0,
+                    "fails": 104
+                }
+            }
+    },
+    "metrics": {
+        "checks": {
+            "passes": 104,
+            "fails": 104,
+            "value": 0.5
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 100
+        },
+        "vus_max": {
+            "value": 100,
+            "min": 100,
+            "max": 100
+        },
+        "data_sent": {
+            "count": 2631052,
+            "rate": 19489.116775247123
+        },
+        "data_received": {
+            "rate": 3065.278963496603,
+            "count": 413816
+        },
+        "iteration_duration": {
+            "avg": 36037.52658031497,
+            "min": 1428.8801,
+            "med": 60000.234,
+            "max": 60001.6062,
+            "p(90)": 60000.609319999996,
+            "p(95)": 60000.739285
+        },
+        "iterations": {
+            "count": 254,
+            "rate": 1.881466295957955
+        },
+        "grpc_req_duration": {
+            "med": 350.15284999999994,
+            "max": 554.7473,
+            "p(90)": 398.36437,
+            "p(95)": 406.9622,
+            "avg": 356.7344711538463,
+            "min": 313.0714
+        }
+    }
+}

@@ -1,0 +1,110 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+group = 'com.ssafy'
+version = '0.0.1-SNAPSHOT'
+description = 'SSAFY 공통 프로젝트 A107팀'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+// Protobuf 설정
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.1"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.63.0"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+dependencies {
+	// 0. lombok, Spring Data JPA, Spring WEB
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+
+	// 1. MySQL Connector (자바가 MySQL과 대화할 수 있게 해주는 드라이버)
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// 2. Swagger (SpringDoc)
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.3'
+
+	// 3. QueryDSL
+	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+	annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
+	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+
+	// 4. Security & Auth
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// 5.OAuth2 Client(구글 로그인용)
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	// 6. JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+	// 6. WebSocket (Real-time Messaging)
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	// 7. Redis (Buffer & Atomic Operations)
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// 8. Kafka (Async Spoiler Detection)
+	implementation 'org.springframework.kafka:spring-kafka'
+
+	// 9. gRPC (Pre-send Aggression Check)
+	implementation 'net.devh:grpc-client-spring-boot-starter:3.1.0.RELEASE'
+	implementation 'io.grpc:grpc-protobuf:1.63.0'
+	implementation 'io.grpc:grpc-stub:1.63.0'
+	implementation 'com.google.protobuf:protobuf-java:3.25.1'
+	implementation 'com.google.protobuf:protobuf-java-util:3.25.1'
+
+	compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
+
+	implementation 'jakarta.annotation:jakarta.annotation-api'
+
+	// 10. AWS S3
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.2.0'
+
+	// 11. Email
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

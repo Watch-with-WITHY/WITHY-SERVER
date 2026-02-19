@@ -1,0 +1,11 @@
+.git
+.gradle
+.idea
+build
+!build/libs
+src/test
+gradle
+gradlew
+gradlew.bat
+settings.gradle
+README.md

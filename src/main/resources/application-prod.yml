@@ -1,0 +1,25 @@
+spring:
+  config:
+    activate:
+      on-profile: prod # 이 설정은 'prod' 프로필이 활성화되었을 때만 적용됩니다.
+
+  frontend:
+    base-url: https://watchwithwithy.vercel.app # 프론트엔드 배포 URL
+
+  data:
+    redis:
+      host: ${REDIS_HOST}         # 운영 환경 Redis 호스트 (환경변수 주입)
+      port: ${REDIS_PORT}         # 운영 환경 Redis 포트
+      password: ${REDIS_PASSWORD} # 운영 환경 Redis 비밀번호 (보안 필수)
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS} # 운영 환경 Kafka 브로커 목록 (콤마로 구분, 환경변수 주입)
+    consumer:
+      group-id: withy-group
+      auto-offset-reset: latest
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+

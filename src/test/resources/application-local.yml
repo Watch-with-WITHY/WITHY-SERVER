@@ -1,0 +1,28 @@
+spring:
+  config:
+    activate:
+      on-profile: local # 이 설정은 'local' 프로필이 활성화되었을 때만 적용됩니다.
+  
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/withy_local?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true&useSSL=false
+    username: withy
+    password: withy_password
+
+  data:
+    redis:
+      host: localhost # 로컬 Redis 호스트
+      port: 6379      # 로컬 Redis 포트
+
+  kafka:
+    bootstrap-servers: localhost:9092 # 로컬 Kafka 브로커 주소
+
+grpc:
+  client:
+    service-a: # AggressionClient의 @GrpcClient("service-a")와 일치해야 함
+      address: static://inger-sacred-diffusedly.ngrok-free.dev:443 # AI gRPC 서버 (Ngrok)
+      negotiation-type: tls       # Ngrok HTTPS/TLS 연결을 위해 TLS 필수
+
+ai:
+  spoiler:
+    url: https://dino-granulocytic-lyda.ngrok-free.dev # AI Spoiler REST API (Ngrok)

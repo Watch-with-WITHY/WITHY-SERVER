@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package chat;
+
+option java_multiple_files = true;
+option java_package = "com.ssafy.withy.grpc.slang";
+option java_outer_classname = "SlangFilterProto";
+
+service SlangFilterService {
+    rpc CheckSlang (CheckSlangRequest) returns (CheckSlangResponse);
+}
+
+message CheckSlangRequest {
+    string user_id = 1;
+    string content = 2;
+    string chat_id = 3;
+    string party_id = 4;
+}
+
+message CheckSlangResponse {
+    bool is_safe = 1;
+    string filtered_content = 2; // (Optional) 마스킹 된 내용
+    string reason = 3;           // 비속어 탐지 사유
+    float latency_ms = 4;
+    string user_id = 5;
+    string chat_id = 6;
+    string party_id = 7;
+}
